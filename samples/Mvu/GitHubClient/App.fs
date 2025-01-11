@@ -2,7 +2,7 @@ namespace GitHubClient
 
 open System.Diagnostics
 open System.IO
-open Avalonia.Media
+open Avalonia.Markup.Xaml.Styling
 open Avalonia.Themes.Fluent
 open Fabulous
 open Fabulous.Avalonia
@@ -66,44 +66,22 @@ module GitHubService =
                 | _ -> Error Non200Response
         }
 
-    let getProfileImage (urlString: string) =
-        async {
-            let client = new HttpClient()
-            let! response = client.GetAsync(urlString) |> Async.AwaitTask
-            response.EnsureSuccessStatusCode() |> ignore
-            let! data = response.Content.ReadAsByteArrayAsync() |> Async.AwaitTask
-
-            return
-                match response.StatusCode with
-                | HttpStatusCode.OK -> Ok(new MemoryStream(data))
-                | _ -> Error Non200Response
-        }
-
-
 module App =
     type Msg =
         | UserNameChanged of string
         | SearchClicked
         | UserInfoLoaded of User
         | UserInfoNotFound of GitHubError
-        | ProfileImageLoaded of Stream
-        | ProfileImageNotFound of GitHubError
         | LoadingProgress of float
-
-    type CmdMsg =
-        | GetUserInfo of name: string
-        | GetProfileImage of url: string
 
     type Model =
         { UserName: string
-          UserInfo: RemoteData<string, User>
-          ProfileImage: RemoteData<string, Stream> }
+          UserInfo: RemoteData<string, User> }
 
     let init () =
         { UserName = ""
-          UserInfo = RemoteData.NotAsked
-          ProfileImage = RemoteData.NotAsked },
-        []
+          UserInfo = RemoteData.NotAsked },
+        Cmd.none
 
     let getUserInfo userName =
         task {
@@ -114,122 +92,98 @@ module App =
             | Error error -> return UserInfoNotFound error
         }
 
-    let getProfileImage url =
-        task {
-            let! response = GitHubService.getProfileImage url
-
-            match response with
-            | Ok image -> return ProfileImageLoaded image
-            | Error error -> return ProfileImageNotFound error
-        }
-
-    let mapCmdMsgToCmd cmdMsg =
-        match cmdMsg with
-        | GetUserInfo userName -> Cmd.OfTask.msg(getUserInfo userName)
-        | GetProfileImage url -> Cmd.OfTask.msg(getProfileImage url)
-
     let update msg model =
         match msg with
-        | UserNameChanged userName -> { model with UserName = userName }, []
+        | UserNameChanged userName -> { model with UserName = userName }, Cmd.none
 
         | SearchClicked ->
             { model with
                 UserInfo = RemoteData.Loading },
-            [ GetUserInfo model.UserName ]
+            Cmd.OfTask.msg(getUserInfo model.UserName)
 
         | UserInfoLoaded user ->
             { model with
                 UserInfo = RemoteData.Content(user) },
-            [ GetProfileImage(user.avatar_url) ]
+            Cmd.none
 
         | UserInfoNotFound _ ->
             { model with
                 UserInfo = RemoteData.Failure("User not found!") },
-            []
+            Cmd.none
 
-        | ProfileImageLoaded image ->
-            { model with
-                ProfileImage = RemoteData.Content(image) },
-            []
+        | LoadingProgress _ -> model, Cmd.none
 
-        | ProfileImageNotFound _ ->
-            { model with
-                ProfileImage = RemoteData.Failure("Profile image not found!") },
-            []
+    let program =
+        Program.statefulWithCmd init update
+        |> Program.withTrace(fun (format, args) -> Debug.WriteLine(format, box args))
+        |> Program.withExceptionHandler(fun ex ->
+#if DEBUG
+            printfn $"Exception: %s{ex.ToString()}"
+            false
+#else
+            true
+#endif
+        )
 
-        | LoadingProgress _ -> model, []
+    let content () =
+        Component("GitHubClient") {
+            let! model = Context.Mvu program
 
-    let content model =
-        Grid() {
-            (VStack() {
-                Image("avares://GitHubClient/Assets/github-icon.png")
-                    .size(100., 100.)
+            Grid() {
+                (VStack() {
+                    Image("avares://GitHubClient/Assets/github-icon.png")
+                        .size(100., 100.)
 
-                TextBox(model.UserName, UserNameChanged)
-                Button("Search", SearchClicked)
+                    TextBox(model.UserName, UserNameChanged)
+                    Button("Search", SearchClicked)
 
-                match model.UserInfo with
-                | NotAsked -> ()
-                | Loading -> ProgressBar(0., 1., 0.5, LoadingProgress)
-                | Content user ->
-                    (VStack() {
-                        match model.ProfileImage with
-                        | NotAsked -> ()
-                        | Loading -> ()
-                        | Content source -> Image(source).size(24., 24.)
-                        | Failure _ ->
-                            Image("avares://GitHubClient/Assets/github-icon.png", Stretch.Uniform)
-                                .size(24., 24.)
+                    match model.UserInfo with
+                    | NotAsked -> ()
+                    | Loading -> ProgressBar(0., 1., 0.5, LoadingProgress)
+                    | Content user ->
+                        (VStack() {
+                            AsyncImage(user.avatar_url)
+                                .placeholderSource("avares://GitHubClient/Assets/github-icon.png")
+                                .size(100., 100.)
 
-                        TextBlock(user.login)
+                            TextBlock(user.login)
 
-                        if user.name.IsSome then
-                            TextBlock(user.name.Value)
+                            if user.name.IsSome then
+                                TextBlock(user.name.Value)
 
-                        if user.location.IsSome then
-                            TextBlock(user.location.Value)
+                            if user.location.IsSome then
+                                TextBlock(user.location.Value)
 
-                            if user.bio.IsSome then
-                                TextBlock(user.bio.Value)
+                                if user.bio.IsSome then
+                                    TextBlock(user.bio.Value)
 
-                            TextBlock($"Public repos: {user.public_repos}")
+                                TextBlock($"Public repos: {user.public_repos}")
 
-                            TextBlock($"Public gists: {user.public_gists}")
+                                TextBlock($"Public gists: {user.public_gists}")
 
-                            TextBlock($"Followers: {user.followers}")
+                                TextBlock($"Followers: {user.followers}")
 
-                            TextBlock($"Following: {user.following}")
+                                TextBlock($"Following: {user.following}")
 
-                            TextBlock($"Created at: {user.created_at}")
+                                TextBlock($"Created at: {user.created_at}")
 
-                            TextBlock($"Profile: {user.html_url}")
-                    })
-                        .centerHorizontal()
-                | Failure s -> TextBlock(s)
-            })
-                .centerHorizontal()
+                                TextBlock($"Profile: {user.html_url}")
+                        })
+                            .centerHorizontal()
+                    | Failure s -> TextBlock(s)
+                })
+                    .centerHorizontal()
+            }
         }
 
-    let view model =
+    let view () =
 #if MOBILE
-        SingleViewApplication(content model)
+        SingleViewApplication(content())
 #else
-        DesktopApplication(Window(content model))
+        DesktopApplication(Window(content()))
 #endif
     let create () =
-        let theme () = FluentTheme()
+        let theme () =
+            StyleInclude(baseUri = null, Source = Uri("avares://GitHubClient/App.xaml"))
 
-        let program =
-            Program.statefulWithCmdMsg init update mapCmdMsgToCmd
-            |> Program.withTrace(fun (format, args) -> Debug.WriteLine(format, box args))
-            |> Program.withExceptionHandler(fun ex ->
-#if DEBUG
-                printfn $"Exception: %s{ex.ToString()}"
-                false
-#else
-                true
-#endif
-            )
-            |> Program.withView view
-
-        FabulousAppBuilder.Configure(theme, program)
+        FabulousAppBuilder.Configure(theme, view)

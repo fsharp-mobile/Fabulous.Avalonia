@@ -48,6 +48,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TestableApp.UnitTests", "sa
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Fabulous.Avalonia", "src\Fabulous.Avalonia\Fabulous.Avalonia.fsproj", "{31D47096-FBF7-4A74-A302-011B9608C32E}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Fabulous.Avalonia.Labs", "extensions\Fabulous.Avalonia.Labs\Fabulous.Avalonia.Labs.fsproj", "{992E1416-7747-4E03-98F5-F608C135C635}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -134,5 +136,9 @@ Global
 		{31D47096-FBF7-4A74-A302-011B9608C32E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{31D47096-FBF7-4A74-A302-011B9608C32E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{31D47096-FBF7-4A74-A302-011B9608C32E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{992E1416-7747-4E03-98F5-F608C135C635}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{992E1416-7747-4E03-98F5-F608C135C635}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{992E1416-7747-4E03-98F5-F608C135C635}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{992E1416-7747-4E03-98F5-F608C135C635}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

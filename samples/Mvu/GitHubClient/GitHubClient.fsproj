@@ -41,8 +41,12 @@
     <PackageReference Include="FSharp.Core" />
     <PackageReference Include="Fabulous" />
   </ItemGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="*.xaml" />
+  </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\extensions\Fabulous.Avalonia.Labs\Fabulous.Avalonia.Labs.fsproj" />
     <ProjectReference Include="..\..\..\src\Fabulous.Avalonia\Fabulous.Avalonia.fsproj" />
   </ItemGroup>
   <Import Project="..\..\Fabulous.Avalonia.Samples.targets" />
