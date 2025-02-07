@@ -11,9 +11,6 @@ open Avalonia.Styling
 open Fabulous
 open Fabulous.Avalonia
 open Fabulous.StackAllocatedCollections
-open Fabulous.StackAllocatedCollections.StackList
-
-#nowarn "0044" // Disable obsolete warnings in Fabulous.Avalonia. Please remove after deleting obsolete code.
 
 type IFabApplication =
     inherit IFabElement
@@ -23,6 +20,8 @@ type FabApplication() =
 
     let mutable _mainWindow: Window = null
     let mutable _mainView: Control = null
+
+    let mutable _shutdownMode: ShutdownMode = ShutdownMode.OnLastWindowClose
 
     let mutable _onFrameworkInitialized: Application -> unit = fun _ -> ()
 
@@ -100,6 +99,13 @@ type FabApplication() =
         and set value =
             _mainView <- value
             this.UpdateLifetime()
+
+    member this.ShutdownMode
+        with get () =
+            match this.ApplicationLifetime with
+            | :? IClassicDesktopStyleApplicationLifetime as lifeTime -> lifeTime.ShutdownMode
+            | _ -> failwith "ShutdownMode is not supported for this ApplicationLifetime"
+        and set value = _shutdownMode <- value
 
     /// <summary>Gets the current application instance.</summary>
     static member Current = Application.Current :?> FabApplication
@@ -184,6 +190,10 @@ module Application =
             (fun target -> (target :?> FabApplication).InsetsManager.SystemBarColor)
             (fun target value -> (target :?> FabApplication).InsetsManager.SystemBarColor <- value)
 
+    let ShutdownMode =
+        Attributes.definePropertyWithGetSet "Application_ShutdownMode" (fun target -> (target :?> FabApplication).ShutdownMode) (fun target value ->
+            (target :?> FabApplication).ShutdownMode <- value)
+
     let RequestedThemeVariant =
         Attributes.defineAvaloniaPropertyWithEquality Application.RequestedThemeVariantProperty
 
@@ -253,6 +263,13 @@ type ApplicationModifiers =
     [<Extension>]
     static member inline actualThemeVariant(this: WidgetBuilder<'msg, #IFabApplication>, value: ThemeVariant) =
         this.AddScalar(Application.ActualThemeVariant.WithValue(value))
+
+    /// <summary>Sets the application ShutdownMode.</summary>
+    /// <param name="this">Current widget.</param>
+    /// <param name="value">ShutdownMode to be used for the application.</param>
+    [<Extension>]
+    static member inline shutdownMode(this: WidgetBuilder<'msg, #IFabApplication>, value: ShutdownMode) =
+        this.AddScalar(Application.ShutdownMode.WithValue(value))
 
     /// <summary>Links a ViewRef to access the direct Application control instance</summary>
     /// <param name="this">Current widget</param>
